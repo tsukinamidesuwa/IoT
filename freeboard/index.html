@@ -158,30 +158,45 @@
         });
 
         // 2. อ่านค่า History (20 รายการล่าสุด)
-        database.ref(`${DB_NODE}/history`).limitToLast(20).on('value', (snapshot) => {
-            const historyData = snapshot.val();
-            if (historyData) {
-                const times = [];
-                const temps = [];
-                const humids = [];
-                const lights = [];
+        // ดึงข้อมูล Realtime จาก /latest
+database.ref('latest').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        document.getElementById('temp-val').innerText = data.temperature !== undefined ? data.temperature.toFixed(1) : '--';
+        document.getElementById('humid-val').innerText = data.humidity !== undefined ? data.humidity.toFixed(1) : '--';
+        document.getElementById('light-val').innerText = data.light !== undefined ? data.light.toFixed(1) : '--';
+        
+        // อัปเดตสถานะการเชื่อมต่อ
+        document.getElementById('status-text').innerText = "Connected";
+    }
+});
 
-                let index = 1;
-                Object.keys(historyData).forEach(key => {
-                    const item = historyData[key];
-                    times.push(`#${index++}`);
-                    temps.push(item.temperature);
-                    humids.push(item.humidity);
-                    lights.push(item.light);
-                });
+// ดึงประวัติย้อนหลัง 20 รายการล่าสุดจาก /history ไปวาดกราฟ
+database.ref('history').limitToLast(20).on('value', (snapshot) => {
+    const historyData = snapshot.val();
+    if (historyData) {
+        const temps = [];
+        const humids = [];
+        const lights = [];
+        const labels = [];
 
-                iotChart.data.labels = times;
-                iotChart.data.datasets[0].data = temps;
-                iotChart.data.datasets[1].data = humids;
-                iotChart.data.datasets[2].data = lights;
-                iotChart.update();
-            }
+        let count = 1;
+        Object.keys(historyData).forEach(key => {
+            const item = historyData[key];
+            labels.push(`#${count++}`);
+            temps.push(item.temperature);
+            humids.push(item.humidity);
+            lights.push(item.light);
         });
+
+        // อัปเดตค่าลง Chart.js
+        iotChart.data.labels = labels;
+        iotChart.data.datasets[0].data = temps;
+        iotChart.data.datasets[1].data = humids;
+        iotChart.data.datasets[2].data = lights;
+        iotChart.update();
+    }
+});
     </script>
 </body>
 </html>
