@@ -171,30 +171,31 @@ database.ref('latest').on('value', (snapshot) => {
     }
 });
 
-// ดึงประวัติย้อนหลัง 20 รายการล่าสุดจาก /history ไปวาดกราฟ
-database.ref('history').limitToLast(20).on('value', (snapshot) => {
-    const historyData = snapshot.val();
-    if (historyData) {
-        const temps = [];
-        const humids = [];
-        const lights = [];
-        const labels = [];
+// ดึงข้อมูล Realtime จาก /latest
+database.ref('latest').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        // อัปเดตการแสดงผล 6 ค่า
+        document.getElementById('temp-val').innerText = data.temperature !== undefined ? data.temperature.toFixed(1) : '--';
+        document.getElementById('humid-val').innerText = data.humidity !== undefined ? data.humidity.toFixed(1) : '--';
+        document.getElementById('light-val').innerText = data.light !== undefined ? data.light.toFixed(1) : '--';
+        
+        // 3 ค่าที่เพิ่มเข้ามาใหม่
+        document.getElementById('press-val').innerText = data.pressure !== undefined ? data.pressure.toFixed(1) : '--';
+        document.getElementById('gas-val').innerText = data.gas_level !== undefined ? data.gas_level.toFixed(1) : '--';
+        document.getElementById('bat-val').innerText = data.battery !== undefined ? data.battery.toFixed(1) : '--';
 
-        let count = 1;
-        Object.keys(historyData).forEach(key => {
-            const item = historyData[key];
-            labels.push(`#${count++}`);
-            temps.push(item.temperature);
-            humids.push(item.humidity);
-            lights.push(item.light);
-        });
+        // แสดงเวลาล่าสุดที่อัปเดต
+        if (document.getElementById('last-updated')) {
+            document.getElementById('last-updated').innerText = new Date().toLocaleTimeString('th-TH');
+        }
 
-        // อัปเดตค่าลง Chart.js
-        iotChart.data.labels = labels;
-        iotChart.data.datasets[0].data = temps;
-        iotChart.data.datasets[1].data = humids;
-        iotChart.data.datasets[2].data = lights;
-        iotChart.update();
+        // สถานะการเชื่อมต่อ
+        const statusText = document.getElementById('status-text');
+        if (statusText) {
+            statusText.innerText = "Connected";
+            statusText.className = "text-sm font-medium text-emerald-400";
+        }
     }
 });
     </script>
