@@ -100,7 +100,7 @@
     </div>
 
     <script>
-        // ⚠️ นำค่า Config จริงจาก Project iot-117-16744 มาวางแทนที่ส่วนนี้
+        // ⚠️ Config Firebase ของคุณ
         const firebaseConfig = {
             apiKey: "นำมาจาก Firebase Console ของ iot-117-16744",
             authDomain: "iot-117-16744.firebaseapp.com",
@@ -114,9 +114,7 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        const DB_NODE = "iot-117"; 
-
-        // Setup Chart.js
+        // ตั้งค่า Chart.js
         const ctx = document.getElementById('iotChart').getContext('2d');
         const iotChart = new Chart(ctx, {
             type: 'line',
@@ -139,52 +137,64 @@
             }
         });
 
-        // 1. อ่านค่า Latest
-        database.ref(`${DB_NODE}/latest`).on('value', (snapshot) => {
+        // 1. อ่านค่า Latest แสดงการ์ด 6 ตัว
+        database.ref('latest').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                document.getElementById('temp-val').innerText = data.temperature !== undefined ? data.temperature.toFixed(1) : '--';
-                document.getElementById('humid-val').innerText = data.humidity !== undefined ? data.humidity.toFixed(1) : '--';
-                document.getElementById('light-val').innerText = data.light !== undefined ? data.light.toFixed(1) : '--';
-                document.getElementById('press-val').innerText = data.pressure !== undefined ? data.pressure.toFixed(1) : '--';
-                document.getElementById('gas-val').innerText = data.gas_level !== undefined ? data.gas_level.toFixed(1) : '--';
-                document.getElementById('bat-val').innerText = data.battery !== undefined ? data.battery.toFixed(1) : '--';
+                document.getElementById('temp-val').innerText = data.temperature !== undefined ? parseFloat(data.temperature).toFixed(1) : '--';
+                document.getElementById('humid-val').innerText = data.humidity !== undefined ? parseFloat(data.humidity).toFixed(1) : '--';
+                document.getElementById('light-val').innerText = data.light !== undefined ? parseFloat(data.light).toFixed(1) : '--';
+                document.getElementById('press-val').innerText = data.pressure !== undefined ? parseFloat(data.pressure).toFixed(1) : '--';
+                document.getElementById('gas-val').innerText = data.gas_level !== undefined ? parseFloat(data.gas_level).toFixed(1) : '--';
+                document.getElementById('bat-val').innerText = data.battery !== undefined ? parseFloat(data.battery).toFixed(1) : '--';
 
-                document.getElementById('last-updated').innerText = new Date().toLocaleTimeString('th-TH');
-                document.getElementById('status-dot').className = "w-3 h-3 bg-emerald-500 rounded-full inline-block animate-ping";
-                document.getElementById('status-text').innerText = "Connected & Receiving";
-                document.getElementById('status-text').className = "text-sm font-medium text-emerald-400";
+                if (document.getElementById('last-updated')) {
+                    document.getElementById('last-updated').innerText = new Date().toLocaleTimeString('th-TH');
+                }
+
+                const dot = document.getElementById('status-dot');
+                const statusText = document.getElementById('status-text');
+                if (statusText && dot) {
+                    dot.className = "w-3 h-3 bg-emerald-500 rounded-full inline-block animate-ping";
+                    statusText.innerText = "Connected & Receiving";
+                    statusText.className = "text-sm font-medium text-emerald-400";
+                    setTimeout(() => {
+                        dot.className = "w-3 h-3 bg-emerald-500 rounded-full inline-block";
+                    }, 1000);
+                }
             }
         });
 
-        // 2. อ่านค่า History (20 รายการล่าสุด)
+        // 2. อ่านค่า History 20 รายการล่าสุดเพื่อวาดกราฟ
+        database.ref('history').limitToLast(20).on('value', (snapshot) => {
+            const historyData = snapshot.val();
+            if (historyData) {
+                const times = [];
+                const temps = [];
+                const humids = [];
+                const lights = [];
 
-// ดึงข้อมูล Realtime จาก /latest
-database.ref('latest').on('value', (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-        // อัปเดตการแสดงผล 6 ค่า
-        document.getElementById('temp-val').innerText = data.temperature !== undefined ? data.temperature.toFixed(1) : '--';
-        document.getElementById('humid-val').innerText = data.humidity !== undefined ? data.humidity.toFixed(1) : '--';
-        document.getElementById('light-val').innerText = data.light !== undefined ? data.light.toFixed(1) : '--';
-        
-        // 3 ค่าที่เพิ่มเข้ามาใหม่
-        document.getElementById('press-val').innerText = data.pressure !== undefined ? data.pressure.toFixed(1) : '--';
-        document.getElementById('gas-val').innerText = data.gas_level !== undefined ? data.gas_level.toFixed(1) : '--';
-        document.getElementById('bat-val').innerText = data.battery !== undefined ? data.battery.toFixed(1) : '--';
+                let index = 1;
+                Object.keys(historyData).forEach(key => {
+                    const item = historyData[key];
+                    if (item) {
+                        times.push(`#${index++}`);
+                        temps.push(item.temperature !== undefined ? parseFloat(item.temperature) : 0);
+                        humids.push(item.humidity !== undefined ? parseFloat(item.humidity) : 0);
+                        lights.push(item.light !== undefined ? parseFloat(item.light) : 0);
+                    }
+                });
 
-        // แสดงเวลาล่าสุดที่อัปเดต
-        if (document.getElementById('last-updated')) {
-            document.getElementById('last-updated').innerText = new Date().toLocaleTimeString('th-TH');
-        }
-
-        // สถานะการเชื่อมต่อ
-        const statusText = document.getElementById('status-text');
-        if (statusText) {
-            statusText.innerText = "Connected";
-            statusText.className = "text-sm font-medium text-emerald-400";
-        }
-    }
+                iotChart.data.labels = times;
+                iotChart.data.datasets[0].data = temps;
+                iotChart.data.datasets[1].data = humids;
+                iotChart.data.datasets[2].data = lights;
+                iotChart.update();
+            }
+        });
+    </script>
+</body>
+</html>
 });
     </script>
 </body>
